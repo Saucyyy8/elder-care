@@ -2,11 +2,11 @@ import { motion } from "framer-motion";
 import { Heart } from "lucide-react";
 import SOSButton from "@/components/SOSButton";
 import DailyChecklist from "@/components/DailyChecklist";
-import VoiceAssistant from "@/components/VoiceAssistant";
 import RelativeEmailManager from "@/components/RelativeEmailManager";
 import FallDetectionPanel from "@/components/FallDetectionPanel";
 import ActivityMonitor from "@/components/ActivityMonitor";
 import CompanionChat from "@/components/CompanionChat";
+import VoiceAssistant from "@/components/VoiceAssistant";
 
 const Index = () => {
   return (
@@ -57,7 +57,8 @@ const Index = () => {
           <div className="bg-card rounded-2xl p-6 shadow-sm">
             <DailyChecklist />
           </div>
-          <div className="bg-card rounded-2xl p-6 shadow-sm">
+          <div className="bg-card rounded-2xl p-6 shadow-sm flex flex-col justify-center">
+            <h2 className="text-xl font-heading font-semibold mb-4 text-foreground">Voice Assistant</h2>
             <VoiceAssistant />
           </div>
         </motion.section>

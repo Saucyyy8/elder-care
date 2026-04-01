@@ -8,14 +8,36 @@ interface Message {
   sender: "ai" | "user";
 }
 
-const aiResponses = [
-  "That's wonderful to hear! Remember to stay hydrated today. 💧",
-  "I'm glad you're feeling well! Have you taken your afternoon medicine yet?",
-  "That sounds lovely! Your daughter Sarah checked in earlier — she sends her love. ❤️",
-  "Great job on your walk today! You've been so active this week. 🎉",
-  "I'm always here if you need anything. How about we check off your evening tasks?",
-  "Your vitals look great today! Keep up the good work. 😊",
-];
+const GEMINI_API_KEY = "AIzaSyDv61fq1EDqyhuq7yAJqH2XsvnN2RXlD2k";
+
+const generateGeminiResponse = async (chatHistory: Message[], currentInput: string) => {
+  try {
+    const contents = chatHistory.map(msg => ({
+      role: msg.sender === "user" ? "user" : "model",
+      parts: [{ text: msg.text }]
+    }));
+    
+    contents.push({
+      role: "user",
+      parts: [{ text: currentInput }]
+    });
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents })
+    });
+
+    const data = await response.json();
+    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+      return data.candidates[0].content.parts[0].text;
+    }
+    return "I'm sorry, I couldn't understand that.";
+  } catch (error) {
+    console.error("Gemini API Error:", error);
+    return "Something went wrong. Please try again later.";
+  }
+};
 
 const CompanionChat = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -23,21 +45,21 @@ const CompanionChat = () => {
   ]);
   const [input, setInput] = useState("");
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!input.trim()) return;
     const userMsg: Message = { id: Date.now().toString(), text: input, sender: "user" };
     setMessages((prev) => [...prev, userMsg]);
+    const currentInput = input;
     setInput("");
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: aiResponses[Math.floor(Math.random() * aiResponses.length)],
-        sender: "ai",
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-    }, 1000);
+    const aiText = await generateGeminiResponse(messages, currentInput);
+    
+    const aiMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      text: aiText,
+      sender: "ai",
+    };
+    setMessages((prev) => [...prev, aiMsg]);
   };
 
   return (

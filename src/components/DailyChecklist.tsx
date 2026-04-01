@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Pill, UtensilsCrossed, Footprints, Droplets, Moon, Heart } from "lucide-react";
+import { Check, Pill, UtensilsCrossed, Footprints, Droplets, Moon, Heart, Send } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface CheckItem {
   id: string;
@@ -23,6 +25,39 @@ const initialItems: CheckItem[] = [
 
 const DailyChecklist = () => {
   const [items, setItems] = useState<CheckItem[]>(initialItems);
+  const { toast } = useToast();
+
+  const sendDemoReminder = async () => {
+    try {
+      const telegramToken = "8367204813:AAFhSRWxBC9VYDDGj_2YrbKl_84SFry30vg";
+      const chatId = "8507257605";
+      const message = "⏰ Reminder: It's time to take your medication!";
+      
+      const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+        }),
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Reminder Sent",
+          description: "Medication reminder sent via Telegram.",
+        });
+      } else {
+        toast({
+          title: "Failed",
+          description: "Could not send reminder.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const toggle = (id: string) => {
     setItems((prev) =>
@@ -37,9 +72,15 @@ const DailyChecklist = () => {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-heading font-bold text-foreground">Today's Checklist</h2>
-        <span className="text-sm font-body text-muted-foreground">
-          {completedCount}/{items.length} done
-        </span>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={sendDemoReminder}>
+            <Send className="w-4 h-4 mr-2" />
+            Demo Reminder
+          </Button>
+          <span className="text-sm font-body text-muted-foreground">
+            {completedCount}/{items.length} done
+          </span>
+        </div>
       </div>
 
       {/* Progress bar */}

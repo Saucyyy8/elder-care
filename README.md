@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Guardian Companion
 
 TODO: Document your project here

@@ -20,8 +20,38 @@ const SOSButton = () => {
       if (count <= 0) {
         clearInterval(interval);
         setCountdown(null);
-        // Trigger alert
-        alert("🚨 Emergency contacts have been notified!");
+        
+        // Trigger Telegram Alert
+        const telegramToken = "8367204813:AAFhSRWxBC9VYDDGj_2YrbKl_84SFry30vg";
+        const chatId = "8507257605";
+        const message = "🚨 EMERGENCY! The SOS button was pressed on Guardian Companion!";
+        
+        // 1. Send telegram message
+        fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: message,
+          }),
+        }).catch(err => console.error("Failed to send Telegram alert:", err));
+
+        // 2. Send email via local Express backend
+        fetch(`http://localhost:3001/api/sos-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: message,
+            location: "Location data unavailable.",
+          }),
+        }).catch(err => console.error("Failed to send Email alert:", err));
+
+        // Trigger UI alert
+        alert("🚨 Emergency contacts have been notified via Telegram and Email!");
         setIsActive(false);
       } else {
         setCountdown(count);
