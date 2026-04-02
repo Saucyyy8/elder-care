@@ -5,10 +5,30 @@ import { PersonStanding, Footprints, Armchair, Clock } from "lucide-react";
 type ActivityState = "walking" | "standing" | "sitting" | "resting";
 
 const activityConfig: Record<ActivityState, { icon: React.ReactNode; label: string; color: string; bgColor: string }> = {
-  walking: { icon: <Footprints className="w-8 h-8" />, label: "Walking", color: "text-success", bgColor: "bg-success/10" },
-  standing: { icon: <PersonStanding className="w-8 h-8" />, label: "Standing", color: "text-warning", bgColor: "bg-warning/10" },
-  sitting: { icon: <Armchair className="w-8 h-8" />, label: "Sitting", color: "text-info", bgColor: "bg-info/10" },
-  resting: { icon: <Armchair className="w-8 h-8" />, label: "Resting", color: "text-voice", bgColor: "bg-voice/10" },
+  walking: {
+    icon: <Footprints className="h-8 w-8" />,
+    label: "Walking",
+    color: "text-teal-100",
+    bgColor: "bg-teal-500/20",
+  },
+  standing: {
+    icon: <PersonStanding className="h-8 w-8" />,
+    label: "Standing",
+    color: "text-cyan-100",
+    bgColor: "bg-cyan-500/20",
+  },
+  sitting: {
+    icon: <Armchair className="h-8 w-8" />,
+    label: "Sitting",
+    color: "text-amber-100",
+    bgColor: "bg-amber-500/20",
+  },
+  resting: {
+    icon: <Armchair className="h-8 w-8" />,
+    label: "Resting",
+    color: "text-slate-100",
+    bgColor: "bg-slate-600/40",
+  },
 };
 
 const ActivityMonitor = () => {
@@ -48,23 +68,22 @@ const ActivityMonitor = () => {
   const config = activityConfig[activity];
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-xl font-heading font-bold text-slate-100 drop-shadow-sm flex items-center gap-2">
-        <Clock className="w-5 h-5 text-warning" />
+    <div className="space-y-4">
+      <h2 className="flex items-center gap-2 text-xl font-heading font-semibold text-slate-100">
+        <Clock className="h-5 w-5 text-cyan-200" />
         Activity Monitor
       </h2>
 
-      {/* Current activity */}
       <motion.div
         key={activity}
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className={`${config.bgColor} p-5 rounded-xl flex items-center gap-4`}
+        className={`${config.bgColor} flex items-center gap-4 rounded-2xl border border-white/15 p-5 shadow-[0_0_28px_rgba(45,212,191,0.2)]`}
       >
         <span className={config.color}>{config.icon}</span>
         <div>
-          <p className={`font-heading font-bold text-xl ${config.color}`}>{config.label}</p>
-          <p className="text-sm text-muted-foreground">For {duration} min</p>
+          <p className={`text-xl font-semibold ${config.color}`}>{config.label}</p>
+          <p className="text-base text-slate-300">For {duration} min</p>
         </div>
       </motion.div>
 
@@ -72,7 +91,7 @@ const ActivityMonitor = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-cyan-500/10 border border-cyan-300/40 p-3 rounded-lg flex items-center justify-between gap-3"
+          className="flex items-center justify-between gap-3 rounded-xl border border-cyan-300/40 bg-cyan-500/10 p-3"
         >
           <div>
             <p className="text-sm text-cyan-200 font-body font-medium">{reminderMessage}</p>
@@ -87,7 +106,6 @@ const ActivityMonitor = () => {
         </motion.div>
       )}
 
-      {/* Activity selectors */}
       <div className="grid grid-cols-2 gap-2">
         {(Object.keys(activityConfig) as ActivityState[]).map((key) => {
           const ac = activityConfig[key];
@@ -95,10 +113,10 @@ const ActivityMonitor = () => {
             <button
               key={key}
               onClick={() => changeActivity(key)}
-              className={`p-3 rounded-lg flex items-center gap-2 transition-all text-sm font-body font-medium ${
+              className={`flex items-center gap-2 rounded-xl p-3 text-sm font-medium transition-all ${
                 activity === key
-                  ? `${ac.bgColor} ${ac.color} ring-2 ring-current`
-                  : "bg-card text-muted-foreground hover:bg-secondary"
+                  ? `${ac.bgColor} ${ac.color} ring-1 ring-cyan-200/50`
+                  : "bg-slate-900/75 text-slate-300 hover:bg-slate-800"
               }`}
             >
               {ac.icon}

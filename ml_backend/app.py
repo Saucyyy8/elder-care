@@ -4,6 +4,7 @@ import joblib
 import time
 import numpy as np
 from flask import Flask, jsonify, Response
+import platform
 from flask_cors import CORS
 from threading import Thread
 import csv
@@ -30,15 +31,19 @@ app = Flask(__name__)
 CORS(app) # Crucial for hackathon: prevents 'Cross-Origin' browser errors
 
 # Load the Brains
+MODEL_READY = False
 try:
     art = joblib.load("ensemble_model.pkl")
     model = art['model']
     features = art['features']
     le = art['le']
+    MODEL_READY = True
     print(f"✅ Model Loaded. Features: {len(features)}")
 except Exception as e:
-    print(f"❌ Error loading model: {e}")
-    exit()
+    model = None
+    features = []
+    le = None
+    print(f"⚠️ Location model unavailable: {e}")
 
 # Global state to store the 'Latest' results
 latest_data = {
@@ -54,19 +59,40 @@ latest_data = {
 DEV_MODE = True
 
 # --- SCANNING LOGIC ---
+def scan_with_nmcli():
+    subprocess.run(["nmcli", "dev", "wifi", "rescan"], capture_output=True)
+    res = subprocess.check_output("nmcli -f BSSID,SIGNAL dev wifi", shell=True).decode("utf-8")
+    matches = re.findall(r"([0-9A-Fa-f:]{17})\s+(\d+)", res)
+    return {str(m[0]): (int(m[1]) / 2) - 100 for m in matches}
+
+
+def scan_with_airport():
+    airport_path = "/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport"
+    res = subprocess.check_output([airport_path, "-s"]).decode("utf-8", errors="ignore")
+    # Example line: SSID BSSID RSSI CHANNEL HT ...
+    matches = re.findall(r"([0-9A-Fa-f:]{17})\s+(-?\d+)", res)
+    return {str(m[0]): int(m[1]) for m in matches}
+
+
 def get_live_scan():
     try:
-        # Force fresh hardware scan (no sudo to prevent freezing)
-        subprocess.run(["nmcli", "dev", "wifi", "rescan"], capture_output=True)
-        res = subprocess.check_output("nmcli -f BSSID,SIGNAL dev wifi", shell=True).decode('utf-8')
-        matches = re.findall(r"([0-9A-Fa-f:]{17})\s+(\d+)", res)
-        return {str(m[0]): (int(m[1])/2)-100 for m in matches}
-    except:
+        system_name = platform.system().lower()
+        if system_name == "darwin":
+            return scan_with_airport()
+        return scan_with_nmcli()
+    except Exception:
         return {}
 
 def detector_worker():
     """ Background thread that updates the global state """
     global latest_data
+
+    if not MODEL_READY:
+        latest_data["status"] = "Location model unavailable"
+        while True:
+            latest_data["timestamp"] = time.time()
+            time.sleep(2)
+
     prob_buffer = deque(maxlen=10)
     DECAY_FACTOR = 0.85
     
@@ -77,6 +103,7 @@ def detector_worker():
     while True:
         scan = get_live_scan()
         if not scan:
+            latest_data["status"] = "Buffering"
             time.sleep(0.5)
             continue
             
@@ -146,6 +173,7 @@ def status():
     """ Endpoint for the website to poll """
     res = latest_data.copy()
     res["dev_mode"] = DEV_MODE
+    res["location_model_ready"] = MODEL_READY
     return jsonify(res)
 
 @app.route('/toggle-dev-mode', methods=['POST'])
@@ -195,5 +223,6 @@ if __name__ == '__main__':
     scanner_thread.start()
     
     # Run the Flask Server
-    print("🚀 API Running on http://localhost:5000/status")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    port = int(os.getenv("ML_PORT", "5050"))
+    print(f"🚀 API Running on http://localhost:{port}/status")
+    app.run(host='0.0.0.0', port=port, debug=False)

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Phone, X, AlertTriangle } from "lucide-react";
+import { ASSISTANT_ACTION_EVENT, type AssistantAction } from "@/lib/assistantActions";
 
 interface SOSButtonProps {
   onEmergencyStateChange?: (isEmergency: boolean) => void;
@@ -66,6 +67,28 @@ const SOSButton = ({ onEmergencyStateChange }: SOSButtonProps) => {
     }, 1000);
   };
 
+  useEffect(() => {
+    const onAssistantAction = (event: Event) => {
+      const custom = event as CustomEvent<AssistantAction>;
+      const action = custom.detail;
+
+      if (!action) {
+        return;
+      }
+
+      if (action.type === "sos_trigger" && !isActive) {
+        handleSOS();
+      }
+
+      if (action.type === "sos_cancel" && isActive) {
+        handleSOS();
+      }
+    };
+
+    window.addEventListener(ASSISTANT_ACTION_EVENT, onAssistantAction);
+    return () => window.removeEventListener(ASSISTANT_ACTION_EVENT, onAssistantAction);
+  }, [isActive]);
+
   return (
     <motion.div
       className="relative flex flex-col items-center gap-4"
@@ -73,13 +96,13 @@ const SOSButton = ({ onEmergencyStateChange }: SOSButtonProps) => {
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: "spring", stiffness: 200 }}
     >
-      <span className={`absolute inset-0 rounded-full ${isActive ? "animate-ping bg-red-400/30" : "bg-red-300/10"}`} />
+      <span className={`absolute -inset-10 rounded-full ${isActive ? "animate-ping bg-red-500/35" : "bg-red-400/20"}`} />
       <button
         onClick={handleSOS}
-        className={`relative h-40 w-40 rounded-full flex items-center justify-center transition-all duration-300 border border-white/30 shadow-[inset_8px_8px_18px_rgba(255,255,255,0.12),inset_-10px_-10px_18px_rgba(0,0,0,0.45),0_14px_32px_rgba(255,71,87,0.45)] backdrop-blur-md ${
+        className={`relative h-48 w-48 rounded-full flex items-center justify-center border border-red-200/50 transition-all duration-300 shadow-[inset_10px_10px_24px_rgba(255,190,190,0.15),inset_-12px_-12px_24px_rgba(120,10,10,0.55),0_20px_40px_rgba(220,38,38,0.55)] ${
           isActive
             ? "bg-sos animate-sos-pulse"
-            : "bg-gradient-to-br from-red-500 to-red-700 hover:scale-105"
+            : "bg-gradient-to-br from-red-500 via-red-600 to-red-800 hover:scale-105"
         }`}
       >
         <AnimatePresence mode="wait">
@@ -105,15 +128,27 @@ const SOSButton = ({ onEmergencyStateChange }: SOSButtonProps) => {
               className="flex flex-col items-center gap-1"
             >
               <Phone className="w-10 h-10 text-sos-foreground" />
-              <span className="text-sos-foreground font-heading text-xl font-extrabold">
+              <span className="text-sos-foreground font-heading text-2xl font-extrabold tracking-wide">
                 SOS
               </span>
             </motion.div>
           )}
         </AnimatePresence>
       </button>
-      <p className="text-base font-body text-center max-w-[220px]" style={{ color: "#E0E0E0" }}>
-        {isActive ? "Tap again to cancel" : "Press & hold for emergency"}
+      <div className="space-y-1 text-center">
+        <p className="text-sm font-semibold uppercase tracking-[0.17em] text-red-100">
+          {isActive ? "Emergency Countdown Running" : "Press & Hold For Emergency"}
+        </p>
+        <p className="text-xs text-slate-300">{isActive ? "Tap again to cancel." : "Safety hotline and family contacts will be notified."}</p>
+      </div>
+      {!isActive && (
+        <div className="inline-flex items-center gap-2 rounded-full border border-red-300/30 bg-red-500/10 px-4 py-1 text-xs text-red-100">
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Central Emergency Control
+        </div>
+      )}
+      <p className="max-w-[230px] text-center text-[11px] uppercase tracking-[0.18em] text-red-200/90">
+        phone support enabled
       </p>
     </motion.div>
   );
