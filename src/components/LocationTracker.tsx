@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { MapPin, Clock, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
+import { ML_API_BASE } from "@/lib/mlApi";
 
 interface LocationData {
   location: string;
@@ -24,74 +25,58 @@ const LocationTracker = () => {
   const prevLocationRef = useRef<string>("");
   const prevAnomalyRef = useRef<boolean>(false);
 
-  const [backendStatus, setBackendStatus] = useState<string>("Connecting to location backend...");
-
   useEffect(() => {
     const fetchLocation = async () => {
-      const endpoints = ["http://localhost:5000/status", "http://localhost:3001/status"];
-      let json: LocationData | null = null;
-      for (const endpoint of endpoints) {
-        try {
-          const res = await fetch(endpoint);
-          if (res.ok) {
-            json = await res.json();
-            setBackendStatus(`Connected to backend at ${endpoint}`);
-            break;
+      try {
+          const res = await fetch(`${ML_API_BASE}/status`);
+        if (res.ok) {
+          const json: LocationData = await res.json();
+          setData(json);
+
+          // Trigger toast on Room 302
+          if (json.location !== prevLocationRef.current) {
+            const lowLoc = json.location.toLowerCase();
+            const prevLowLoc = prevLocationRef.current.toLowerCase();
+            
+            if (lowLoc.includes("302") && !prevLowLoc.includes("302")) {
+              toast.error("Alert: Resident has entered Room 302!", {
+                description: "Security / Room 302 notification triggered.",
+                duration: 8000,
+              });
+            }
+            prevLocationRef.current = json.location;
           }
-        } catch (err) {
-          console.debug("LocationTracker fetch error", err);
+
+          // Trigger speech analysis for time anomalies
+          if (json.anomaly_alert && !prevAnomalyRef.current) {
+            toast.warning("Room Anomaly Detected", {
+              description: json.anomaly_message,
+              duration: 10000,
+            });
+            prevAnomalyRef.current = true;
+            
+            if ('speechSynthesis' in window) {
+              const utterance = new SpeechSynthesisUtterance(json.anomaly_message || "Alert, anomaly detected.");
+              utterance.lang = 'en-US';
+              utterance.rate = 1.0;
+              window.speechSynthesis.speak(utterance);
+            }
+          } else if (!json.anomaly_alert) {
+            prevAnomalyRef.current = false;
+          }
         }
-      }
-
-      if (!json) {
-        setBackendStatus("Location backend unreachable; start ml_backend/server on port 5000 or 3001.");
-        return;
-      }
-
-      setData(json);
-
-      // Trigger toast on Room 302
-      if (json.location !== prevLocationRef.current) {
-        const lowLoc = json.location.toLowerCase();
-        const prevLowLoc = prevLocationRef.current.toLowerCase();
-
-        if (lowLoc.includes("302") && !prevLowLoc.includes("302")) {
-          toast.error("Alert: Resident has entered Room 302!", {
-            description: "Security / Room 302 notification triggered.",
-            duration: 8000,
-          });
-        }
-        prevLocationRef.current = json.location;
-      }
-
-      // Trigger speech analysis for time anomalies
-      if (json.anomaly_alert && !prevAnomalyRef.current) {
-        toast.warning("Room Anomaly Detected", {
-          description: json.anomaly_message,
-          duration: 10000,
-        });
-        prevAnomalyRef.current = true;
-
-        if ("speechSynthesis" in window) {
-          const utterance = new SpeechSynthesisUtterance(json.anomaly_message || "Alert, anomaly detected.");
-          utterance.lang = "en-US";
-          utterance.rate = 1.0;
-          window.speechSynthesis.speak(utterance);
-        }
-      } else if (!json.anomaly_alert) {
-        prevAnomalyRef.current = false;
+      } catch (err) {
+        console.error("Failed to fetch location", err);
       }
     };
 
     const interval = setInterval(fetchLocation, 1000);
-    fetchLocation();
-
     return () => clearInterval(interval);
   }, []);
 
   const toggleDevMode = async () => {
     try {
-      const res = await fetch("http://localhost:5000/toggle-dev-mode", { method: "POST" });
+        const res = await fetch(`${ML_API_BASE}/toggle-dev-mode`, { method: "POST" });
       if (res.ok) {
         const json = await res.json();
         setData((prev) => ({ ...prev, dev_mode: json.dev_mode }));
@@ -147,7 +132,6 @@ const LocationTracker = () => {
         <div className={`h-2 w-2 rounded-full ${data.status === 'Active' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
         <span className="text-xs font-semibold uppercase text-slate-300">{data.status}</span>
       </div>
-      <p className="mt-2 text-xs text-slate-400">{backendStatus}</p>
     </div>
   );
 };
