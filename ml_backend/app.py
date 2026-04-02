@@ -3,7 +3,7 @@ import re
 import joblib
 import time
 import numpy as np
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Response
 from flask_cors import CORS
 from threading import Thread
 import csv
@@ -148,6 +148,15 @@ def simulate_fall():
         return jsonify({"status": "Simulation triggered"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/video_feed')
+def video_feed():
+    """ Video streaming route. """
+    try:
+        from fall_detection import generate_frames
+        return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    except Exception as e:
+        return str(e), 500
 
 if __name__ == '__main__':
     # Start scanning in a separate thread

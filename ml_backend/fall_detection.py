@@ -75,49 +75,55 @@ def detect_fall(keypoints):
 DISPLAY_WIDTH = 480   
 DISPLAY_HEIGHT = 800  
 
+def generate_frames():
+    cap = cv2.VideoCapture(VIDEO_PATH)
 
-cap = cv2.VideoCapture(VIDEO_PATH)
+    if not cap.isOpened():
+        print("Error: Could not open video")
+        return
 
-if not cap.isOpened():
-    print("Error: Could not open video")
-    exit()
+    print("Running fall detection on video...")
 
-print("Running fall detection on video...")
+    while True:
+        ret, frame = cap.read()
 
-while True:
-    ret, frame = cap.read()
+        if not ret:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            continue
 
+        h, w, _ = frame.shape
 
-    if not ret:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        continue
+        scale = min(DISPLAY_WIDTH / w, DISPLAY_HEIGHT / h)
+        new_w = int(w * scale)
+        new_h = int(h * scale)
 
-    
-    h, w, _ = frame.shape
+        resized = cv2.resize(frame, (new_w, new_h))
 
-    scale = min(DISPLAY_WIDTH / w, DISPLAY_HEIGHT / h)
-    new_w = int(w * scale)
-    new_h = int(h * scale)
+        canvas = np.zeros((DISPLAY_HEIGHT, DISPLAY_WIDTH, 3), dtype=np.uint8)
 
-    resized = cv2.resize(frame, (new_w, new_h))
+        y_offset = (DISPLAY_HEIGHT - new_h) // 2
+        x_offset = (DISPLAY_WIDTH - new_w) // 2
 
+        canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
 
-    canvas = np.zeros((DISPLAY_HEIGHT, DISPLAY_WIDTH, 3), dtype=np.uint8)
+        keypoints = detect_pose(frame)
+        fall = detect_fall(keypoints)
 
+        if fall:
+            print("🚨 FALL DETECTED")
+            send_telegram("🚨 Fall detected (video demo)")
+            cv2.putText(canvas, "🚨 FALL DETECTED", (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3, cv2.LINE_AA)
 
-    y_offset = (DISPLAY_HEIGHT - new_h) // 2
-    x_offset = (DISPLAY_WIDTH - new_w) // 2
+        ret, buffer = cv2.imencode('.jpg', canvas)
+        frame_bytes = buffer.tobytes()
 
-    canvas[y_offset:y_offset+new_h, x_offset:x_offset+new_w] = resized
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
+        # Adding a small sleep so we don't consume 100% CPU when yielding frames fast
+        time.sleep(0.03)
 
-    keypoints = detect_pose(frame)
-    fall = detect_fall(keypoints)
+if __name__ == '__main__':
+    for _ in generate_frames():
+        pass
 
-    if fall:
-        print("🚨 FALL DETECTED")
-        send_telegram("🚨 Fall detected (video demo)")
-        break
-
-cap.release()
-print("Simulation completed successfully.")

@@ -6,6 +6,7 @@ import SOSButton from "@/components/SOSButton";
 import CompanionChat from "@/components/CompanionChat";
 import LocationTracker from "@/components/LocationTracker";
 import LocationLog from "@/components/LocationLog";
+import FallDetectionVideo from "@/components/FallDetectionVideo";
 import { AlertTriangle, Bell, LogOut, MessageCircleHeart, Siren, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -284,6 +285,9 @@ const Dashboard = () => {
           </div>
           <div className="rounded-2xl border border-cyan-200/30 bg-slate-900/70 p-5 shadow-xl backdrop-blur">
             <RelativeEmailManager onContactsChange={setFamilyContacts} />
+          </div>
+          <div className="rounded-2xl border border-cyan-200/30 bg-slate-900/70 p-5 shadow-xl backdrop-blur">
+            <FallDetectionVideo />
           </div>
         </section>
       </main>
