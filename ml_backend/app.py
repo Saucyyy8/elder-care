@@ -45,8 +45,13 @@ latest_data = {
     "location": "Calibrating...",
     "confidence": 0,
     "status": "Scanning",
-    "timestamp": 0
+    "timestamp": 0,
+    "anomaly_alert": False,
+    "anomaly_message": "",
+    "time_in_room": 0
 }
+
+DEV_MODE = True
 
 # --- SCANNING LOGIC ---
 def get_live_scan():
@@ -67,6 +72,7 @@ def detector_worker():
     
     last_predicted_location = None
     consecutive_count = 0
+    room_entry_time = time.time()
     
     while True:
         scan = get_live_scan()
@@ -100,6 +106,8 @@ def detector_worker():
         # Check if location changed (Only log on transitions)
         if latest_data["location"] != new_location and consecutive_count >= 2:
             latest_data["location"] = new_location
+            room_entry_time = time.time()
+            latest_data["anomaly_alert"] = False
             
             # Log transition to CSV
             with open("location_log.csv", "a", newline="") as f:
@@ -109,6 +117,21 @@ def detector_worker():
             # Entered a new room! Check trigger
             if "302" in new_location.lower() or new_location == "Room 302":
                 send_telegram_notification(f"Alert: Resident has entered {new_location}.")
+                
+        # Check time anomalies
+        time_spent = time.time() - room_entry_time
+        latest_data["time_in_room"] = time_spent
+
+        current_threshold = 20 if DEV_MODE else 1200
+
+        if "301" in latest_data["location"]:
+            if time_spent >= current_threshold and not latest_data["anomaly_alert"]:
+                latest_data["anomaly_alert"] = True
+                alert_msg = "Warning. Resident has been in Room 301 for over 20 minutes. Please check on them."
+                latest_data["anomaly_message"] = alert_msg
+                send_telegram_notification(f"Alert: Resident has been in Room 301 for over 20 minutes {'(Dev Mode)' if DEV_MODE else ''}!")
+        elif "301" not in latest_data["location"]:
+             latest_data["anomaly_alert"] = False
                 
         # Update generic UI data instantly
         latest_data["confidence"] = round(float(current_probs[np.argmax(current_probs)]) * 100, 2)
@@ -121,7 +144,15 @@ def detector_worker():
 @app.route('/status', methods=['GET'])
 def status():
     """ Endpoint for the website to poll """
-    return jsonify(latest_data)
+    res = latest_data.copy()
+    res["dev_mode"] = DEV_MODE
+    return jsonify(res)
+
+@app.route('/toggle-dev-mode', methods=['POST'])
+def toggle_dev_mode():
+    global DEV_MODE
+    DEV_MODE = not DEV_MODE
+    return jsonify({"dev_mode": DEV_MODE})
 
 @app.route('/log', methods=['GET'])
 def get_log():
