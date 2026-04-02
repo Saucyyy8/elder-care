@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "server": "node server.js",
-    "ml": "cd ml_backend && python3 -m pip install -q -r requirements.txt && (python3 app.py || python app.py)",
+    "ml": "cd ml_backend && (python3 -m pip install -q -r requirements.txt || echo 'dependency install skipped') && (python3 app.py || python app.py)",
     "dev:all": "concurrently \"npm run server\" \"npm run ml\" \"npm run dev\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
