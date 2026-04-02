@@ -117,17 +117,7 @@ while True:
     if fall:
         print("🚨 FALL DETECTED")
         send_telegram("🚨 Fall detected (video demo)")
-
-    status_text = "FALL DETECTED" if fall else "Normal"
-    color = (0, 0, 255) if fall else (0, 255, 0)
-
-    cv2.putText(canvas, status_text, (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
-
-    cv2.imshow("Fall Detection (Video)", canvas)
-
-    if cv2.waitKey(30) & 0xFF == 27:
         break
 
 cap.release()
-cv2.destroyAllWindows()
+print("Simulation completed successfully.")

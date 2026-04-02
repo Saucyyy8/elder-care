@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import ActivityMonitor from "@/components/ActivityMonitor";
 import DailyChecklist from "@/components/DailyChecklist";
-import FallDetectionPanel from "@/components/FallDetectionPanel";
 import RelativeEmailManager from "@/components/RelativeEmailManager";
 import SOSButton from "@/components/SOSButton";
 import CompanionChat from "@/components/CompanionChat";
@@ -70,7 +69,6 @@ const Dashboard = () => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSosEmergency, setIsSosEmergency] = useState(false);
-  const [fallStatus, setFallStatus] = useState<"monitoring" | "alert" | "safe">("monitoring");
   const [checklistSnapshot, setChecklistSnapshot] = useState<ChecklistSnapshot | null>(null);
   const [familyContacts, setFamilyContacts] = useState<FamilyContactSummary[]>([]);
 
@@ -80,7 +78,7 @@ const Dashboard = () => {
   );
 
   const statusConfig = useMemo(() => {
-    if (isSosEmergency || fallStatus === "alert") {
+    if (isSosEmergency) {
       return {
         level: "emergency" as const,
         title: `${userName}, this is an emergency. Help is being contacted now.`,
@@ -118,7 +116,7 @@ const Dashboard = () => {
       title: `${checklistSnapshot.profileName}, it's time for your ${firstMissed.label}.`,
       subtitle: `You missed the ${firstMissed.time} reminder. Shall I remind you again in 5 minutes?`,
     };
-  }, [checklistSnapshot, fallStatus, isSosEmergency, userName]);
+  }, [checklistSnapshot, isSosEmergency, userName]);
 
   const statusClasses =
     statusConfig.level === "emergency"
@@ -163,7 +161,7 @@ const Dashboard = () => {
   };
 
   const assistantContext = useMemo(() => {
-    const safetyLevel = isSosEmergency || fallStatus === "alert"
+    const safetyLevel = isSosEmergency
       ? "emergency"
       : statusConfig.level === "warning"
         ? "missed-task"
@@ -177,7 +175,7 @@ const Dashboard = () => {
       checklistItems: checklistSnapshot?.items || [],
       familyUpdates: familyContacts.map((contact) => `${contact.name} (${contact.relation})`),
     };
-  }, [checklistSnapshot, familyContacts, fallStatus, isSosEmergency, statusConfig.level, statusConfig.subtitle, userName]);
+  }, [checklistSnapshot, familyContacts, isSosEmergency, statusConfig.level, statusConfig.subtitle, userName]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-foreground [&_button]:min-h-[60px]">
@@ -267,14 +265,20 @@ const Dashboard = () => {
             <LocationTracker />
           </div>
           <div className="rounded-2xl border border-cyan-200/30 bg-slate-900/70 p-5 shadow-xl backdrop-blur">
-            <LocationLog />
+            <LocationLog onSosTrigger={() => {
+              setIsSosEmergency(true);
+              handleReminderNotification({
+                title: "Auto SOS from Room 302",
+                body: "Resident has been in Room 302 for over 10 minutes. Emergency contacts notified.",
+                profileName: userName,
+                itemLabel: "Room 302 Safety Alarm",
+                timeLabel: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
+              });
+            }} />
           </div>
         </section>
 
         <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <div className="rounded-2xl border border-orange-300/40 bg-orange-100/15 p-5 shadow-xl backdrop-blur">
-            <FallDetectionPanel onStatusChange={setFallStatus} />
-          </div>
           <div className="rounded-2xl border border-cyan-200/30 bg-slate-900/70 p-5 shadow-xl backdrop-blur">
             <ActivityMonitor />
           </div>

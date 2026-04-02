@@ -139,6 +139,16 @@ def get_log():
         print(f"Error reading log: {e}")
     return jsonify(data)
 
+@app.route('/simulate-fall', methods=['POST'])
+def simulate_fall():
+    """ Spawns the headless fall detection script in a subprocess """
+    try:
+        # Run natively in the background without blocking the HTTP request
+        subprocess.Popen(["../../rssi/bin/python", "fall_detection.py"])
+        return jsonify({"status": "Simulation triggered"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     # Start scanning in a separate thread
     scanner_thread = Thread(target=detector_worker, daemon=True)

@@ -28,7 +28,7 @@ interface CompanionChatProps {
   context: AssistantContext;
 }
 
-const GEMINI_API_KEY = "AIzaSyDv61fq1EDqyhuq7yAJqH2XsvnN2RXlD2k";
+const GEMINI_API_KEY = "AIzaSyCGDi17xxkOTRpz00ApwmKZkJwb0nZkF8E";
 const PERSONA_INSTRUCTION =
   "You are the Guardian Companion Assistant. You are supportive, patient, and clear. Your goal is to help Suhas manage his daily routine. You have access to his checklist, family updates, and safety status. Use plain language at grade-6 level and keep responses concise.";
 

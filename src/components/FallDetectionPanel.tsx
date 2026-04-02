@@ -63,7 +63,10 @@ const FallDetectionPanel = ({ onStatusChange }: FallDetectionPanelProps) => {
 
       <div className="flex gap-2">
         <button
-          onClick={() => setStatus("alert")}
+          onClick={() => {
+            setStatus("alert");
+            fetch("http://localhost:5000/simulate-fall", { method: "POST" }).catch(console.error);
+          }}
           className="flex-1 min-h-[60px] rounded-lg bg-sos/10 text-sos font-body text-sm font-medium hover:bg-sos/20 transition-colors"
         >
           Simulate Fall
