@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Video, Play, Square } from "lucide-react";
+import { ML_API_BASE } from "@/lib/mlApi";
 
 const FallDetectionVideo = () => {
   const [isActive, setIsActive] = useState(false);
@@ -46,7 +47,7 @@ const FallDetectionVideo = () => {
       <div className="relative flex-1 min-h-[200px] overflow-hidden rounded-xl border border-white/10 bg-black/40">
         {isActive ? (
           <img
-            src={`http://localhost:5000/video_feed?t=${sessionTime}`}
+            src={`${ML_API_BASE}/video_feed?t=${sessionTime}`}
             alt="Live Monitoring"
             className="h-full w-full object-cover"
             onError={(e) => {
