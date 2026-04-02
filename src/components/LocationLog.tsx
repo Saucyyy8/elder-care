@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
 import { Activity } from "lucide-react";
-import { ML_API_BASE } from "@/lib/mlApi";
 
 interface LogEntry {
   timestamp: string;
@@ -24,7 +23,7 @@ const LocationLog = ({ onSosTrigger }: LocationLogProps) => {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await fetch(`${ML_API_BASE}/log`);
+        const res = await fetch("http://localhost:5000/log");
         if (res.ok) {
           const json: LogEntry[] = await res.json();
           // We only take the most recent 50 to avoid crazy DOM size over long period

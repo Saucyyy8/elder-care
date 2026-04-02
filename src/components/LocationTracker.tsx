@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { MapPin, Clock, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
-import { ML_API_BASE } from "@/lib/mlApi";
 
 interface LocationData {
   location: string;
@@ -28,7 +27,7 @@ const LocationTracker = () => {
   useEffect(() => {
     const fetchLocation = async () => {
       try {
-          const res = await fetch(`${ML_API_BASE}/status`);
+        const res = await fetch("http://localhost:5000/status");
         if (res.ok) {
           const json: LocationData = await res.json();
           setData(json);
@@ -76,7 +75,7 @@ const LocationTracker = () => {
 
   const toggleDevMode = async () => {
     try {
-        const res = await fetch(`${ML_API_BASE}/toggle-dev-mode`, { method: "POST" });
+      const res = await fetch("http://localhost:5000/toggle-dev-mode", { method: "POST" });
       if (res.ok) {
         const json = await res.json();
         setData((prev) => ({ ...prev, dev_mode: json.dev_mode }));
