@@ -16,66 +16,78 @@ const LocationLog = ({ onSosTrigger }: LocationLogProps) => {
   const [room302Minutes, setRoom302Minutes] = useState(0);
   const [sosSent, setSosSent] = useState(false);
   const [locationAlert, setLocationAlert] = useState<string | null>(null);
+  const [backendStatus, setBackendStatus] = useState<string>("Connecting to location backend...");
   const room302StartRef = useRef<number | null>(null);
   const notificationsRef = useRef<{ room302: boolean }>({ room302: false });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchLogs = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/log");
-        if (res.ok) {
-          const json: LogEntry[] = await res.json();
-          // We only take the most recent 50 to avoid crazy DOM size over long period
-          setLogs(json.slice(-50));
-
-          const latestLog = json[json.length - 1];
-          const now = Date.now();
-          if (latestLog?.location?.toLowerCase().includes("302")) {
-            if (!room302StartRef.current) {
-              room302StartRef.current = now;
-              setLocationAlert("Room 302 entry detected. Monitoring for 10+ minutes...");
-            }
-
-            const elapsedMS = now - (room302StartRef.current ?? now);
-            const elapsedMin = Math.floor(elapsedMS / 60000);
-            setRoom302Minutes(elapsedMin);
-
-            if (elapsedMS >= 10 * 60000 && !notificationsRef.current.room302) {
-              notificationsRef.current.room302 = true;
-              setSosSent(true);
-              setLocationAlert("Room 302 occupancy exceeded 10 minutes. Sending SOS alert...");
-              onSosTrigger?.();
-
-              const telegramToken = "8367204813:AAFhSRWxBC9VYDDGj_2YrbKl_84SFry30vg";
-              const chatId = "8507257605";
-              const message = "🚨 AUTO SOS: Resident has been in Room 302 for over 10 minutes.";
-
-              fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ chat_id: chatId, text: message }),
-              }).catch((err) => console.error("Failed to send Telegram SOS:", err));
-
-              fetch(`http://localhost:3001/api/sos-email`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message, location: "Room 302" }),
-              }).catch((err) => console.error("Failed to send Email SOS:", err));
-            }
-          } else {
-            room302StartRef.current = null;
-            notificationsRef.current.room302 = false;
-            setRoom302Minutes(0);
-            setSosSent(false);
-            setLocationAlert(null);
+      const endpoints = ["http://localhost:5000/log", "http://localhost:3001/log"];
+      let json: LogEntry[] | null = null;
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint);
+          if (res.ok) {
+            json = await res.json();
+            setBackendStatus(`Connected to backend at ${endpoint}`);
+            break;
           }
+        } catch (err) {
+          console.debug("LocationLog fetch error", err);
         }
-      } catch (err) {
-        console.error("Failed to fetch logs", err);
+      }
+
+      if (!json) {
+        setBackendStatus("Location log backend unreachable; start ml_backend/backend on 5000 or 3001.");
+        return;
+      }
+
+      setLogs(json.slice(-50));
+
+      const latestLog = json[json.length - 1];
+      const now = Date.now();
+      if (latestLog?.location?.toLowerCase().includes("302")) {
+        if (!room302StartRef.current) {
+          room302StartRef.current = now;
+          setLocationAlert("Room 302 entry detected. Monitoring for 10+ minutes...");
+        }
+
+        const elapsedMS = now - (room302StartRef.current ?? now);
+        const elapsedMin = Math.floor(elapsedMS / 60000);
+        setRoom302Minutes(elapsedMin);
+
+        if (elapsedMS >= 10 * 60000 && !notificationsRef.current.room302) {
+          notificationsRef.current.room302 = true;
+          setSosSent(true);
+          setLocationAlert("Room 302 occupancy exceeded 10 minutes. Sending SOS alert...");
+          onSosTrigger?.();
+
+          const telegramToken = "8367204813:AAFhSRWxBC9VYDDGj_2YrbKl_84SFry30vg";
+          const chatId = "8507257605";
+          const message = "🚨 AUTO SOS: Resident has been in Room 302 for over 10 minutes.";
+
+          fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chat_id: chatId, text: message }),
+          }).catch((err) => console.error("Failed to send Telegram SOS:", err));
+
+          fetch(`http://localhost:3001/api/sos-email`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, location: "Room 302" }),
+          }).catch((err) => console.error("Failed to send Email SOS:", err));
+        }
+      } else {
+        room302StartRef.current = null;
+        notificationsRef.current.room302 = false;
+        setRoom302Minutes(0);
+        setSosSent(false);
+        setLocationAlert(null);
       }
     };
-    
+
     // Polling every 2.5 seconds to match the 5-scan buffer
     fetchLogs();
     const interval = setInterval(fetchLogs, 2500);
@@ -103,6 +115,7 @@ const LocationLog = ({ onSosTrigger }: LocationLogProps) => {
         </div>
       )}
       <div className="flex-1 overflow-hidden" style={{ minHeight: "200px" }}>
+        <p className="mb-2 text-xs text-slate-400">{backendStatus}</p>
         {logs.length === 0 ? (
           <div className="flex h-full items-center justify-center text-slate-400">
             Waiting for real-time scans...
