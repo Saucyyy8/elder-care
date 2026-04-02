@@ -3,7 +3,9 @@ import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ResponsiveContaine
 import DashboardShell from "@/components/DashboardShell";
 import SOSButton from "@/components/SOSButton";
 import FallDetectionVideo from "@/components/FallDetectionVideo";
-import { MapPin, ShieldCheck } from "lucide-react";
+import ActivityMonitor from "@/components/ActivityMonitor";
+import LocationTracker from "@/components/LocationTracker";
+import { ShieldCheck } from "lucide-react";
 import { loadVitals } from "@/lib/vitals";
 
 const activityData = [
@@ -33,6 +35,10 @@ const Dashboard = () => {
           <article className="rounded-3xl border border-red-300/30 bg-gradient-to-b from-red-600/15 to-slate-900/80 p-5 shadow-[0_0_35px_rgba(239,68,68,0.28)]">
             <h2 className="mb-4 text-lg font-semibold text-slate-100">Emergency Control</h2>
             <SOSButton />
+          </article>
+
+          <article className="rounded-3xl border border-cyan-200/20 bg-slate-900/80 p-5">
+            <ActivityMonitor />
           </article>
 
           <article className="rounded-3xl border border-white/10 bg-slate-900/80 p-5">
@@ -78,12 +84,8 @@ const Dashboard = () => {
           </article>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <article className="rounded-2xl border border-white/10 bg-slate-900/75 p-4">
-              <div className="mb-2 flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-cyan-200" />
-                <h4 className="text-sm font-semibold text-slate-100">Current Location</h4>
-              </div>
-              <p className="text-lg font-semibold text-cyan-100">Room 301 - Stable</p>
+            <article className="rounded-2xl border border-cyan-200/20 bg-slate-900/75 p-4">
+              <LocationTracker />
             </article>
             <article className="rounded-2xl border border-white/10 bg-slate-900/75 p-4">
               <div className="mb-2 flex items-center gap-2">
