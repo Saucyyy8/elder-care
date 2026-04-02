@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "server": "node server.js",
-    "ml": "cd ml_backend && ../../rssi/bin/python app.py",
-    "dev:all": "concurrently \"npm run server\" \"npm run ml\" \"npm run dev\"",
+    "ml": "cd ml_backend && /home/klepto/rssi/rssi/bin/python app.py",
+    "ml-activity": "cd ml_backend && /home/klepto/rssi/rssi/bin/python activity_api.py",
+    "dev:all": "concurrently \"npm run server\" \"npm run ml\" \"npm run ml-activity\" \"npm run dev\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

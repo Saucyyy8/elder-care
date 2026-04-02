@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { PersonStanding, Footprints, Armchair, Clock } from "lucide-react";
+import { PersonStanding, Footprints, Armchair, Clock, Play, Square, Video } from "lucide-react";
 
 type ActivityState = "walking" | "standing" | "sitting" | "resting";
 
@@ -13,17 +13,50 @@ const activityConfig: Record<ActivityState, { icon: React.ReactNode; label: stri
 
 const ActivityMonitor = () => {
   const [activity, setActivity] = useState<ActivityState>("sitting");
+  const [confidence, setConfidence] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+  const [sessionTime, setSessionTime] = useState(Date.now());
   const [reminderMessage, setReminderMessage] = useState<string | null>(null);
   const [hasReminderFired, setHasReminderFired] = useState(false);
   const [nextReminderThreshold, setNextReminderThreshold] = useState(20);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setDuration((d) => d + 1);
-    }, 60000); // every minute
-    return () => clearInterval(timer);
-  }, []);
+    let timer: NodeJS.Timeout;
+    let durationTimer: NodeJS.Timeout;
+
+    if (isActive) {
+      timer = setInterval(() => {
+        fetch('http://localhost:5001/activity')
+          .then(res => res.json())
+          .then(data => {
+            if (data.activity && data.activity !== "Initializing...") {
+              setActivity((prev) => {
+                if (prev !== data.activity.toLowerCase()) {
+                  setDuration(0);
+                }
+                return data.activity.toLowerCase() as ActivityState;
+              });
+              setConfidence(data.confidence || 0);
+            }
+          })
+          .catch(err => console.error(err));
+      }, 500);
+
+      // Duration counter only runs while camera is on
+      durationTimer = setInterval(() => {
+        setDuration((d) => d + 1);
+      }, 60000);
+    } else {
+      setActivity("resting");
+      setConfidence(0);
+    }
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(durationTimer);
+    };
+  }, [isActive]);
 
   useEffect(() => {
     if (activity === "sitting" && duration >= nextReminderThreshold && !hasReminderFired) {
@@ -45,14 +78,57 @@ const ActivityMonitor = () => {
     setNextReminderThreshold(20 + Math.floor(Math.random() * 11)); // 20 to 30 minutes window
   };
 
-  const config = activityConfig[activity];
+  const handleToggle = async () => {
+    try {
+      const newState = !isActive;
+      await fetch(`http://localhost:5001/${newState ? 'start_cam' : 'stop_cam'}`, { method: "POST" });
+      setIsActive(newState);
+      if (newState) setSessionTime(Date.now());
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const config = activityConfig[activity] || activityConfig['resting'];
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-xl font-heading font-bold text-slate-100 drop-shadow-sm flex items-center gap-2">
-        <Clock className="w-5 h-5 text-warning" />
-        Activity Monitor
-      </h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-heading font-bold text-slate-100 drop-shadow-sm flex items-center gap-2">
+          <Clock className="w-5 h-5 text-warning" />
+          Activity Monitor
+        </h2>
+        <button
+          onClick={handleToggle}
+          className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors border ${
+            isActive 
+              ? "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30" 
+              : "bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 border-cyan-500/30"
+          }`}
+        >
+          {isActive ? (
+            <><Square className="h-3 w-3" fill="currentColor" /> Stop Cam</>
+          ) : (
+            <><Play className="h-3 w-3" fill="currentColor" /> Start Cam</>
+          )}
+        </button>
+      </div>
+
+      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40 h-48 w-full mt-2 flex items-center justify-center">
+         {isActive ? (
+            <img 
+              src={`http://localhost:5001/activity_feed?t=${sessionTime}`} 
+              alt="Live WebCam" 
+              className="object-cover h-full w-full"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+         ) : (
+            <div className="flex flex-col items-center gap-2 text-slate-500 text-sm">
+              <Video className="w-8 h-8 opacity-50" />
+              <span>Camera OFF. Click Start Cam.</span>
+            </div>
+         )}
+      </div>
 
       {/* Current activity */}
       <motion.div
@@ -87,25 +163,16 @@ const ActivityMonitor = () => {
         </motion.div>
       )}
 
-      {/* Activity selectors */}
-      <div className="grid grid-cols-2 gap-2">
-        {(Object.keys(activityConfig) as ActivityState[]).map((key) => {
-          const ac = activityConfig[key];
-          return (
-            <button
-              key={key}
-              onClick={() => changeActivity(key)}
-              className={`p-3 rounded-lg flex items-center gap-2 transition-all text-sm font-body font-medium ${
-                activity === key
-                  ? `${ac.bgColor} ${ac.color} ring-2 ring-current`
-                  : "bg-card text-muted-foreground hover:bg-secondary"
-              }`}
-            >
-              {ac.icon}
-              {ac.label}
-            </button>
-          );
-        })}
+      {/* Live Confidence Bar */}
+      <div className="mt-4 flex flex-col gap-1">
+        <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Detection Confidence</p>
+        <div className="w-full bg-slate-800/50 h-2 rounded-full overflow-hidden border border-white/5">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${confidence}%` }}
+            className={`h-full rounded-full transition-all duration-300 ${activity === 'resting' ? 'bg-red-400' : 'bg-emerald-400'}`} 
+          />
+        </div>
       </div>
     </div>
   );
